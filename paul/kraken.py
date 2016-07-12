@@ -62,43 +62,49 @@ class API(object):
         }
         return self._query(urlpath, params=params, headers=headers)
 
+    def _tolist(self, obj):
+        obj = obj if isinstance(obj, list) else [obj]
+        return ','.join(obj)
+
     def time(self):
         return self.query_public('Time')
 
-    def assets(self, info='info', aclass='currency', asset='all'):
-        params = {'info': info, 'aclass': aclass, 'asset': asset}
+    def assets(self, asset=None, info='info', aclass='currency'):
+        params = {'aclass': aclass, 'info': info}
+        if asset:
+            params['asset'] = self._tolist(asset)
         return self.query_public('Assets', params)
 
-    def assetpairs(self, info='info', pair='all'):
-        if isinstance(pair, list):
-            pair = ','.join(pair)
-        params = {'info': info, 'pair': pair}
+    def assetpairs(self, pair=None, info='info'):
+        params = {'info': info}
+        if pair:
+            params['pair'] = self._tolist(pair)
         return self.query_public('AssetPairs', params)
 
     def ticker(self, pair):
-        params = {'pair': ','.join(pair)}
+        params = {'pair': self._tolist(pair)}
         return self.query_public('Ticker', params)
 
     def ohlc(self, pair, interval=1, since=None):
-        params = {'pair': ','.join(pair), 'interval': interval}
+        params = {'pair': self._tolist(pair), 'interval': interval}
         if since:
             params['since'] = since
         return self.query_public('OHLC', params)
 
     def depth(self, pair, count=None):
-        params = {'pair': ','.join(pair)}
+        params = {'pair': self._tolist(pair)}
         if count is not None:
             params['count'] = count
         return self.query_public('Depth', params)
 
     def trades(self, pair, since=None):
-        params = {'pair': ','.join(pair)}
+        params = {'pair': self._tolist(pair)}
         if since:
             params['since'] = since
         return self.query_public('Trades', params)
 
     def spread(self, pair, since=None):
-        params = {'pair': ','.join(pair)}
+        params = {'pair': self._tolist(pair)}
         if since:
             params['since'] = since
         return self.query_public('Spread', params)

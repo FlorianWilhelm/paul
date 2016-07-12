@@ -3,5 +3,5 @@
 # scipy>=0.9
 
 pandas
-#pymongo
+pymongo
 requests
