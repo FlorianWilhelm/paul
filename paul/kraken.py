@@ -49,7 +49,7 @@ class API(object):
                                                        method=method)
         params['none'] = int(1000*time.time())
         # generate signed headers
-        postdata = urllib.parse.urlencode(req)
+        postdata = urllib.parse.urlencode(params)
         enc_params = (str(params['nonce']) + postdata).encode()
         message = urlpath.encode() + hashlib.sha256(enc_params).digest()
         signature = hmac.new(base64.b64decode(self.secret),
