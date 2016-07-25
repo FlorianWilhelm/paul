@@ -92,19 +92,19 @@ class API(object):
         return self.query_public('OHLC', params)
 
     def depth(self, pair, count=None):
-        params = {'pair': self._tolist(pair)}
+        params = {'pair': pair}
         if count is not None:
             params['count'] = count
         return self.query_public('Depth', params)
 
     def trades(self, pair, since=None):
-        params = {'pair': self._tolist(pair)}
+        params = {'pair': pair}
         if since:
             params['since'] = since
         return self.query_public('Trades', params)
 
     def spread(self, pair, since=None):
-        params = {'pair': self._tolist(pair)}
+        params = {'pair': pair}
         if since:
             params['since'] = since
         return self.query_public('Spread', params)

@@ -6,9 +6,6 @@ import logging
 import asyncio
 from datetime import datetime
 
-from pymongo import MongoClient
-from paul.kraken import API
-
 __author__ = "Florian Wilhelm"
 __copyright__ = "Florian Wilhelm"
 __license__ = "new-bsd"
@@ -57,6 +54,9 @@ class Collector(object):
                 self.client[self.db_name][Colls.ticker].insert_many(dataset)
             await asyncio.sleep(self.rates['ticker'])
 
+    async def _poll_depth(self):
+        
+
     def start(self):
         loop = asyncio.get_event_loop()
         loop.create_task(self._poll_ticker())
@@ -64,13 +64,3 @@ class Collector(object):
             loop.run_forever()
         except Exception as e:
             loop.close()
-
-
-if __name__ == '__main__':
-    client = MongoClient()
-    api = API()
-    asset_pairs = list(api.assetpairs()['result'].keys())
-    euro_pairs = [x for x in  asset_pairs if 'EU' in x]
-    rates = {Colls.ticker: 1}
-    collector = Collector(client, 'paul', api, euro_pairs, rates)
-    collector.start()
