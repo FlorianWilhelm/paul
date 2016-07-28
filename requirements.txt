@@ -3,5 +3,6 @@
 # scipy>=0.9
 
 pandas
-pymongo
 requests
+psycopg2
+sqlalchemy
