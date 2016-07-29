@@ -2,6 +2,8 @@
 """
 Collector storing Kraken's public data in Mongo DB for later analysis
 """
+import sys
+import signal
 import logging
 import asyncio
 from datetime import datetime
@@ -38,34 +40,54 @@ class Collector(object):
             _logger.error(resp['error'])
             self._nerrors += 1
             return None
+        except asyncio.CancelledError as e:
+            _logger.info("Task cancelled...")
+            raise
         except Exception as e:
             _logger.exception("General error:")
             self._nerrors += 1
             return None
         return resp['result']
 
-    async def _poll_ticker(self):
+    async def poll_ticker(self):
         while True:
+            _logger.debug("Polling ticker...")
             resp = await self._call_api(self.api.ticker, self.pairs)
             if resp:
                 self.db_client.insert_ticker(resp)
             await asyncio.sleep(self.rates['ticker'])
 
-    async def _poll_depth(self):
+    async def poll_depth(self):
         while True:
+            _logger.debug("Polling depth...")
             for pair in self.pairs:
                 resp = await self._call_api(self.api.depth, pair)
                 if resp:
                     self.db_client.insert_depth(resp)
             await asyncio.sleep(self.rates['depth'])
 
+    def signal_handler(self):
+        _logger.info("Shutting down...")
+        for task in asyncio.Task.all_tasks():
+            task.cancel()
+        loop = asyncio.get_event_loop()
+        loop.stop()
+
     def start(self):
         _logger.info("Starting event loop...")
         loop = asyncio.get_event_loop()
-        loop.create_task(self._poll_ticker())
-        loop.create_task(self._poll_depth())
+        if _logger.getEffectiveLevel() < logging.INFO:
+            loop.set_debug(True)
+        loop.add_signal_handler(signal.SIGINT, self.signal_handler)
+        loop.add_signal_handler(signal.SIGTERM, self.signal_handler)
+        loop.create_task(self.poll_ticker())
+        loop.create_task(self.poll_depth())
         try:
             loop.run_forever()
+        except asyncio.CancelledError as e:
+            _logger.info("Execution was cancelled.")
+            loop.close()
+            sys.exit(0)
         except Exception as e:
             _logger.exception("Exception in event loop:")
             loop.close()

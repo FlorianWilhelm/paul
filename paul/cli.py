@@ -21,22 +21,14 @@ _logger = logging.getLogger(__name__)
 
 def collect(args):
     _logger.info("Starting to collect...")
-    while True:
-        try:
-            client = DBClient()
-            api = API()
-            asset_pairs = list(api.assetpairs()['result'].keys())
-            euro_pairs = [x for x in  asset_pairs
-                          if 'EU' in x and not x.endswith('.d')]
-            rates = {Colls.ticker: 10, Colls.depth: 10}
-            collector = Collector(client, api, euro_pairs, rates)
-            collector.start()
-        except KeyboardInterrupt as e:
-            raise
-        except Exception as e:
-            _logger.exception("Exception in main loop:")
-            time.sleep(10)
-
+    client = DBClient()
+    api = API()
+    asset_pairs = list(api.assetpairs()['result'].keys())
+    euro_pairs = [x for x in  asset_pairs
+                  if 'EU' in x and not x.endswith('.d')]
+    rates = {Colls.ticker: 10, Colls.depth: 600}
+    collector = Collector(client, api, euro_pairs, rates)
+    collector.start()
 
 def interact(args):
     _logger.info("Starting interactive session...")
