@@ -8,7 +8,7 @@ import logging
 import time
 
 from .kraken import API
-from .collector import Colls, Collector
+from .collector import Collector
 from .db import DBClient
 from . import __version__
 
@@ -26,7 +26,7 @@ def collect(args):
     asset_pairs = list(api.assetpairs()['result'].keys())
     euro_pairs = [x for x in  asset_pairs
                   if 'EU' in x and not x.endswith('.d')]
-    rates = {Colls.ticker: 10, Colls.depth: 600}
+    rates = {'ticker': 10, 'depth': 600}
     collector = Collector(client, api, euro_pairs, rates)
     collector.start()
 

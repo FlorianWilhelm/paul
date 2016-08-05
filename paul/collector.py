@@ -14,14 +14,6 @@ __license__ = "new-bsd"
 
 _logger = logging.getLogger(__name__)
 
-class Colls(object):
-    """Collections used in databases"""
-    ticker = 'ticker'
-    depth = 'depth'
-    spread = 'spread'
-    trades = 'trades'
-    ohlc = 'ohlc'
-
 
 class Collector(object):
     def __init__(self, db_client, kraken_api, pairs, rates):
