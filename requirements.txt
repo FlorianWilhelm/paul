@@ -6,3 +6,5 @@ pandas
 requests
 psycopg2
 sqlalchemy
+pymc3
+IPython

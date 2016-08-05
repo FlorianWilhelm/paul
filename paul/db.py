@@ -22,7 +22,7 @@ VOL_PREC = Numeric(14, 4)
 
 
 class Trade(object):
-    datetime = 'datetime'
+    createtime = 'createtime'
     pair = 'pair'
     volume = 'volume'
     price = 'price'
@@ -32,14 +32,14 @@ class Trade(object):
 
 
 class Spread(object):
-    datetime = 'datetime'
+    createtime = 'createtime'
     pair = 'pair'
     bid = 'bid'
     ask = 'ask'
 
 
 class Ticker(object):
-    datetime = 'datetime'
+    createtime = 'createtime'
     pair = 'pair'
     ask_price = 'ask_price'
     ask_vol = 'ask_vol'
@@ -61,15 +61,13 @@ class Ticker(object):
 
 
 class Depth(object):
-    datetime = 'datetime'
+    createtime = 'createtime'
     pair = 'pair'
     order = 'order'
-    ask_price = 'ask_price'
-    ask_vol = 'ask_vol'
-    ask_datetime = 'ask_datetime'
-    bid_price = 'bid_price'
-    bid_vol = 'bid_vol'
-    bid_datetime = 'bid_datetime'
+    idx = 'index'
+    price = 'price'
+    vol = 'volume'
+    timestamp = 'timestamp'
 
 
 class DBClient(object):
@@ -85,7 +83,7 @@ class DBClient(object):
         metadata = MetaData()
         trades = Table('trades', metadata,
                        Column('id', Integer, primary_key=True),
-                       Column(Trade.datetime, DateTime),
+                       Column(Trade.createtime, DateTime),
                        Column(Trade.pair, String),
                        Column(Trade.volume, VOL_PREC),
                        Column(Trade.price, PRICE_PREC),
@@ -94,13 +92,13 @@ class DBClient(object):
                        Column(Trade.misc, String))
         spreads = Table('spreads', metadata,
                         Column('id', Integer, primary_key=True),
-                        Column(Spread.datetime, DateTime),
+                        Column(Spread.createtime, DateTime),
                         Column(Spread.pair, String),
                         Column(Spread.bid, PRICE_PREC),
                         Column(Spread.ask, PRICE_PREC))
         ticker = Table('ticker', metadata,
                        Column('id', Integer, primary_key=True),
-                       Column(Ticker.datetime, DateTime),
+                       Column(Ticker.createtime, DateTime),
                        Column(Ticker.pair, String),
                        Column(Ticker.ask_price, PRICE_PREC),
                        Column(Ticker.ask_vol, VOL_PREC),
@@ -122,15 +120,13 @@ class DBClient(object):
                        )
         depth = Table('depth', metadata,
                       Column('id', Integer, primary_key=True),
-                      Column(Depth.datetime, DateTime),
+                      Column(Depth.createtime, DateTime),
                       Column(Depth.pair, String),
-                      Column(Depth.order, Integer),
-                      Column(Depth.ask_price, PRICE_PREC),
-                      Column(Depth.ask_vol, VOL_PREC),
-                      Column(Depth.ask_datetime, DateTime),
-                      Column(Depth.bid_price, PRICE_PREC),
-                      Column(Depth.bid_vol, VOL_PREC),
-                      Column(Depth.bid_datetime, DateTime)
+                      Column(Depth.order, String),
+                      Column(Depth.idx, Integer),
+                      Column(Depth.price, PRICE_PREC),
+                      Column(Depth.vol, VOL_PREC),
+                      Column(Depth.timestamp, DateTime)
                       )
         return metadata
 
@@ -138,7 +134,7 @@ class DBClient(object):
         self.metadata.create_all(self.engine)
 
     def insert_trades(self, pair, trades):
-        cols = [Trade.price, Trade.volume, Trade.datetime, Trade.order,
+        cols = [Trade.price, Trade.volume, Trade.createtime, Trade.order,
                 Trade.type, Trade.misc]
         data = [dict(zip(cols, t)) for t in trades]
         for d in data:
@@ -147,7 +143,7 @@ class DBClient(object):
         return conn.execute(self.trades.insert(), data)
 
     def insert_spreads(self, pair, spreads):
-        cols = [Spread.datetime, Spread.bid, Spread.ask]
+        cols = [Spread.createtime, Spread.bid, Spread.ask]
         data = [dict(zip(cols, s)) for s in spreads]
         for d in data:
             d[Spread.pair] = pair
@@ -156,7 +152,7 @@ class DBClient(object):
 
     def insert_ticker(self, ticker):
         utcnow = datetime.utcnow()
-        data = [{Ticker.datetime: utcnow,
+        data = [{Ticker.createtime: utcnow,
                  Ticker.pair: pair,
                  Ticker.ask_price: Decimal(info['a'][0]),
                  Ticker.ask_vol: Decimal(info['a'][2]),
@@ -181,17 +177,15 @@ class DBClient(object):
 
     def insert_depth(self, depth):
         utcnow = datetime.utcnow()
-        data = [{Depth.datetime: utcnow,
+        data = [{Depth.createtime: utcnow,
                  Depth.pair: pair,
-                 Depth.order: i,
-                 Depth.ask_price: Decimal(array[0]),
-                 Depth.ask_vol: Decimal(array[1]),
-                 Depth.ask_datetime: datetime.fromtimestamp(array[2]),
-                 Depth.bid_price: Decimal(array[0]),
-                 Depth.bid_vol: Decimal(array[1]),
-                 Depth.bid_datetime: datetime.fromtimestamp(array[2])}
-                 for action in ('asks', 'bids')
-                 for pair, info in depth.items()
-                 for i, array in enumerate(info[action])]
+                 Depth.order: order_type,
+                 Depth.idx: i,
+                 Depth.price: Decimal(array[0]),
+                 Depth.vol: Decimal(array[1]),
+                 Depth.timestamp: datetime.utcfromtimestamp(array[2])}
+                 for order_type, orders in trades.items()
+                 for pair, trades in depth.items()
+                 for i, array in enumerate(orders)]
         conn = self.engine.connect()
         return conn.execute(self.depth.insert(), data)
