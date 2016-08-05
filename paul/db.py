@@ -184,8 +184,8 @@ class DBClient(object):
                  Depth.price: Decimal(array[0]),
                  Depth.vol: Decimal(array[1]),
                  Depth.timestamp: datetime.utcfromtimestamp(array[2])}
-                 for order_type, orders in trades.items()
                  for pair, trades in depth.items()
+                 for order_type, orders in trades.items()
                  for i, array in enumerate(orders)]
         conn = self.engine.connect()
         return conn.execute(self.depth.insert(), data)
