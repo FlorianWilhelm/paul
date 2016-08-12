@@ -12,7 +12,7 @@ from sqlalchemy import (Table, Column, Integer, String, MetaData, create_engine,
 
 __author__ = "Florian Wilhelm"
 __copyright__ = "Florian Wilhelm"
-__license__ = "new-bsd"
+__license__ = "gpl3"
 
 _logger = logging.getLogger(__name__)
 
@@ -184,8 +184,8 @@ class DBClient(object):
                  Depth.price: Decimal(array[0]),
                  Depth.vol: Decimal(array[1]),
                  Depth.timestamp: datetime.utcfromtimestamp(array[2])}
-                 for pair, trades in depth.items()
                  for order_type, orders in trades.items()
+                 for pair, trades in depth.items()
                  for idx, array in enumerate(orders)]
         conn = self.engine.connect()
         return conn.execute(self.depth.insert(), data)
