@@ -87,7 +87,9 @@ def parse_args(args):
 
 def main(args):
     args = parse_args(args)
-    logging.basicConfig(level=args.loglevel, stream=sys.stdout)
+    logformat = '[%(asctime)s] %(levelname)s:%(name)s:%(message)s'
+    logging.basicConfig(level=args.loglevel, stream=sys.stdout,
+                        format=logformat, datefmt='%Y-%m-%d %H:%M:%S')
     args.func(args)
 
 

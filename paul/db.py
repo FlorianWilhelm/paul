@@ -139,18 +139,19 @@ class DBClient(object):
         data = [dict(zip(cols, t)) for t in trades]
         for d in data:
             d[Trade.pair] = pair
-        conn = self.engine.connect()
-        return conn.execute(self.trades.insert(), data)
+        with self.engine.begin() as conn:
+            return conn.execute(self.trades.insert(), data)
 
     def insert_spreads(self, pair, spreads):
         cols = [Spread.createtime, Spread.bid, Spread.ask]
         data = [dict(zip(cols, s)) for s in spreads]
         for d in data:
             d[Spread.pair] = pair
-        conn = self.engine.connect()
-        return conn.execute(self.spreads.insert(), data)
+        with self.engine.begin() as conn:
+            return conn.execute(self.spreads.insert(), data)
 
     def insert_ticker(self, ticker):
+        _logger.info("Inserting ticker into DB")
         utcnow = datetime.utcnow()
         data = [{Ticker.createtime: utcnow,
                  Ticker.pair: pair,
@@ -172,10 +173,11 @@ class DBClient(object):
                  Ticker.high_24h: Decimal(info['h'][1]),
                  Ticker.open_price: Decimal(info['o'])}
                 for pair, info in ticker.items()]
-        conn = self.engine.connect()
-        return conn.execute(self.ticker.insert(), data)
+        with self.engine.begin() as conn:
+            return conn.execute(self.ticker.insert(), data)
 
     def insert_depth(self, depth):
+        _logger.info("Inserting depth into DB")
         utcnow = datetime.utcnow()
         data = [{Depth.createtime: utcnow,
                  Depth.pair: pair,
@@ -187,5 +189,5 @@ class DBClient(object):
                  for order_type, orders in trades.items()
                  for pair, trades in depth.items()
                  for idx, array in enumerate(orders)]
-        conn = self.engine.connect()
-        return conn.execute(self.depth.insert(), data)
+        with self.engine.begin() as conn:
+            return conn.execute(self.depth.insert(), data)

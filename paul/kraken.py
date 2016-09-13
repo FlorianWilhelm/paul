@@ -36,6 +36,7 @@ class API(object):
     def _query(self, urlpath, params={}, headers={}):
         url = self._uri + urlpath
         r = requests.post(url, data=params, headers=headers)
+        r.raise_for_status()
         return r.json()
 
     def query_public(self, method, params={}):

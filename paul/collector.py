@@ -39,11 +39,12 @@ class Collector(object):
             _logger.exception("General error:")
             self._nerrors += 1
             return None
-        return resp['result']
+        else:
+            return resp['result']
 
     async def poll_ticker(self):
         while True:
-            _logger.debug("Polling ticker...")
+            _logger.info("Polling ticker...")
             resp = await self._call_api(self.api.ticker, self.pairs)
             if resp:
                 self.db_client.insert_ticker(resp)
@@ -51,7 +52,7 @@ class Collector(object):
 
     async def poll_depth(self):
         while True:
-            _logger.debug("Polling depth...")
+            _logger.info("Polling depth...")
             for pair in self.pairs:
                 resp = await self._call_api(self.api.depth, pair)
                 if resp:
@@ -59,7 +60,7 @@ class Collector(object):
             await asyncio.sleep(self.rates['depth'])
 
     def signal_handler(self):
-        _logger.info("Shutting down...")
+        _logger.info("Signal handler called...")
         for task in asyncio.Task.all_tasks():
             task.cancel()
         loop = asyncio.get_event_loop()
@@ -77,9 +78,9 @@ class Collector(object):
         try:
             loop.run_forever()
         except asyncio.CancelledError as e:
-            _logger.info("Execution was cancelled.")
-            loop.close()
-            sys.exit(0)
+            _logger.info("Execution was cancelled")
         except Exception as e:
             _logger.exception("Exception in event loop:")
+        finally:
+            _logger.info("Stopping event loop...")
             loop.close()
