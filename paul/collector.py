@@ -14,6 +14,7 @@ __license__ = "gpl3"
 
 _logger = logging.getLogger(__name__)
 
+# TODO: Rewrite this using callbacks instead of tasks
 
 class Collector(object):
     def __init__(self, db_client, kraken_api, pairs, rates):
