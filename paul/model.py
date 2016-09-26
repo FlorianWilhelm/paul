@@ -17,3 +17,6 @@ _logger = logging.getLogger(__name__)
 
 def resample(rule, df):
     return df.resample(rule, how=np.mean).interpolate()
+
+
+# ToDo: Add pyflux model and Vikram model here

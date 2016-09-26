@@ -3,6 +3,7 @@
 REST API to Kraken Exchange
 """
 import urllib
+import urllib.parse
 import requests
 import logging
 import time
@@ -10,7 +11,7 @@ import hashlib
 import hmac
 import base64
 
-from paul import __version__
+from .utils import tolist
 
 __author__ = "Florian Wilhelm"
 __copyright__ = "Florian Wilhelm"
@@ -18,9 +19,9 @@ __license__ = "gpl3"
 
 _logger = logging.getLogger(__name__)
 
+
 class API(object):
-    """
-    Kraken.com cryptocurrency Exchange API.
+    """Kraken.com crypto currency exchange API.
     """
     def __init__(self, key=None, secret=None):
         self._key = key
@@ -33,26 +34,30 @@ class API(object):
             self._key = fh.readline().strip()
             self._secret = fh.readline().strip()
 
-    def _query(self, urlpath, params={}, headers={}):
+    def _query(self, urlpath, params=None, headers=None):
+        params = {} if params is None else params
+        headers = {} if headers is None else headers
         url = self._uri + urlpath
         r = requests.post(url, data=params, headers=headers)
         r.raise_for_status()
         return r.json()
 
-    def query_public(self, method, params={}):
-        urlpath = '/{version}/public/{method}'.format(version=self._apiversion,
-                                                      method=method)
+    def query_public(self, method, params=None):
+        params = {} if params is None else params
+        urlpath = '/{version}/public/{method}'.format(
+            version=self._apiversion, method=method)
         return self._query(urlpath, params=params)
 
-    def query_private(self, method, params={}):
-        urlpath = '/{version}/private/{method}'.format(version=self._apiversion,
-                                                       method=method)
+    def query_private(self, method, params=None):
+        params = {} if params is None else params
+        urlpath = '/{version}/private/{method}'.format(
+            version=self._apiversion, method=method)
         params['none'] = int(1000*time.time())
         # generate signed headers
         postdata = urllib.parse.urlencode(params)
         enc_params = (str(params['nonce']) + postdata).encode()
         message = urlpath.encode() + hashlib.sha256(enc_params).digest()
-        signature = hmac.new(base64.b64decode(self.secret),
+        signature = hmac.new(base64.b64decode(self._secret),
                              message,
                              hashlib.sha512)
         sigdigest = base64.b64encode(signature.digest())
@@ -62,31 +67,27 @@ class API(object):
         }
         return self._query(urlpath, params=params, headers=headers)
 
-    def _tolist(self, obj):
-        obj = obj if isinstance(obj, list) else [obj]
-        return ','.join(obj)
-
     def time(self):
         return self.query_public('Time')
 
     def assets(self, asset=None, info='info', aclass='currency'):
         params = {'aclass': aclass, 'info': info}
         if asset:
-            params['asset'] = self._tolist(asset)
+            params['asset'] = tolist(asset)
         return self.query_public('Assets', params)
 
-    def assetpairs(self, pair=None, info='info'):
+    def asset_pairs(self, pair=None, info='info'):
         params = {'info': info}
         if pair:
-            params['pair'] = self._tolist(pair)
+            params['pair'] = tolist(pair)
         return self.query_public('AssetPairs', params)
 
     def ticker(self, pair):
-        params = {'pair': self._tolist(pair)}
+        params = {'pair': tolist(pair)}
         return self.query_public('Ticker', params)
 
     def ohlc(self, pair, interval=1, since=None):
-        params = {'pair': self._tolist(pair), 'interval': interval}
+        params = {'pair': tolist(pair), 'interval': interval}
         if since:
             params['since'] = since
         return self.query_public('OHLC', params)

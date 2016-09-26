@@ -2,11 +2,8 @@
 """
 Broker making trade decisions
 """
-import sys
-import signal
+
 import logging
-import asyncio
-from datetime import datetime
 
 import numpy as np
 import numpy.ma as ma
@@ -24,12 +21,12 @@ def sort_chunks(chunks):
     chunks[:] = np.flipud(chunks)
 
 
-class BellmannBroker(object):
+class BellmanBroker(object):
     def __init__(self, pair, funds, min_bet, horizon, timestep, discount,
-                 max_stake=None, buy_fee=0., sell_fee=0.):
+                 max_stake=None, ask_fee=0., bid_fee=0.):
         self.pair = pair  # currency pair
-        self.buy_fee = 1. + buy_fee / 100  # in percent
-        self.sell_fee = 1. - sell_fee / 100  # in percent
+        self.ask_fee = 1. + ask_fee / 100  # in percent
+        self.bid_fee = 1. - bid_fee / 100  # in percent
         self.funds = funds  # total available money
         self.max_stake = max_stake if max_stake is not None else funds
         self.leftover = funds  # money that can still be spent
@@ -50,17 +47,17 @@ class BellmannBroker(object):
     def at_stake(self):
         return ma.count(self.chunks) * self.min_bet
 
-    def max_buy(self):
+    def max_ask(self):
         return min(ma.count_masked(self.chunks), self.leftover // self.min_bet)
 
-    def max_sell(self):
+    def max_bid(self):
         return ma.count(self.chunks)
 
     def curr_depot_value(self, price):
-        return self.leftover + self.sell_fee * price * np.sum(self.chunks)
+        return self.leftover + self.bid_fee * price * np.sum(self.chunks)
 
     def chunk_value(self, price):
-        return self.min_bet / (self.buy_fee * price)
+        return self.min_bet / (self.ask_fee * price)
 
     def _get_ret_val(self, leftover, chunks, inplace):
         if inplace:
@@ -70,8 +67,8 @@ class BellmannBroker(object):
         else:
             return leftover, chunks
 
-    def buy_chunks(self, count, price, inplace=False):
-        assert 0 < count <= self.max_buy()
+    def ask_chunks(self, count, price, inplace=False):
+        assert 0 < count <= self.max_ask()
         leftover = self.leftover - count * self.min_bet
         chunks = self.chunks if inplace else self.chunks.copy()
         for _ in range(count):
@@ -81,10 +78,10 @@ class BellmannBroker(object):
         sort_chunks(chunks)
         return self._get_ret_val(leftover, chunks, inplace)
 
-    def sell_chunks(self, count, price, inplace=False):
-        assert 0 < count <= self.max_sell()
+    def bid_chunks(self, count, price, inplace=False):
+        assert 0 < count <= self.max_bid()
         leftover = (self.leftover +
-                    np.sum(self.chunks[:count]) * self.sell_fee * price)
+                    np.sum(self.chunks[:count]) * self.bid_fee * price)
         chunks = self.chunks if inplace else self.chunks.copy()
         for idx in range(count):
             chunks.mask[idx] = True
@@ -93,16 +90,16 @@ class BellmannBroker(object):
 
     def get_chunks(self, count, price, inplace=False):
         if count > 0:
-            return self.buy_chunks(count, price, inplace)
+            return self.ask_chunks(count, price, inplace)
         elif count < 0:
-            return self.sell_chunks(-count, price, inplace)
+            return self.bid_chunks(-count, price, inplace)
         else:
             return self._get_ret_val(self.leftover, self.chunks, inplace)
 
     def value_at_delta(self, delta, pdf, curr_price, count):
         def cost(price):
             leftover, chunks = self.get_chunks(count, curr_price)
-            fut_value = leftover + price * self.sell_fee * np.sum(chunks)
+            fut_value = leftover + price * self.bid_fee * np.sum(chunks)
             return pdf(price) * self.discount**delta * fut_value
 
         return integrate.quad(cost, 0., np.infinity)

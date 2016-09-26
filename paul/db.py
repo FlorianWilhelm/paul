@@ -3,12 +3,11 @@
 Database related functionality
 """
 import logging
-import asyncio
 from decimal import Decimal
 from datetime import datetime
 
-from sqlalchemy import (Table, Column, Integer, String, MetaData, create_engine,
-                        DateTime, Numeric)
+from sqlalchemy import (Table, Column, Integer, String, MetaData,
+                        create_engine, DateTime, Numeric)
 
 __author__ = "Florian Wilhelm"
 __copyright__ = "Florian Wilhelm"
@@ -16,7 +15,7 @@ __license__ = "gpl3"
 
 _logger = logging.getLogger(__name__)
 
-
+DB_URI = 'postgresql+psycopg2://localhost:5432/paul'
 PRICE_PREC = Numeric(14, 8)
 VOL_PREC = Numeric(14, 4)
 
@@ -27,7 +26,7 @@ class Trade(object):
     volume = 'volume'
     price = 'price'
     order = 'order'
-    otype = 'type'
+    type = 'type'
     misc = 'misc'
 
 
@@ -70,65 +69,66 @@ class Depth(object):
     timestamp = 'timestamp'
 
 
+def create_metadata():
+    metadata = MetaData()
+    Table('trades', metadata,
+          Column('id', Integer, primary_key=True),
+          Column(Trade.createtime, DateTime),
+          Column(Trade.pair, String),
+          Column(Trade.volume, VOL_PREC),
+          Column(Trade.price, PRICE_PREC),
+          Column(Trade.order, String),
+          Column(Trade.type, String),
+          Column(Trade.misc, String))
+    Table('spreads', metadata,
+          Column('id', Integer, primary_key=True),
+          Column(Spread.createtime, DateTime),
+          Column(Spread.pair, String),
+          Column(Spread.bid, PRICE_PREC),
+          Column(Spread.ask, PRICE_PREC))
+    Table('ticker', metadata,
+          Column('id', Integer, primary_key=True),
+          Column(Ticker.createtime, DateTime),
+          Column(Ticker.pair, String),
+          Column(Ticker.ask_price, PRICE_PREC),
+          Column(Ticker.ask_vol, VOL_PREC),
+          Column(Ticker.bid_price, PRICE_PREC),
+          Column(Ticker.bid_vol, VOL_PREC),
+          Column(Ticker.last_price, PRICE_PREC),
+          Column(Ticker.last_volume, VOL_PREC),
+          Column(Ticker.vol_day, VOL_PREC),
+          Column(Ticker.vol_24h, VOL_PREC),
+          Column(Ticker.vwa_price_day, PRICE_PREC),
+          Column(Ticker.vwa_price_24h, PRICE_PREC),
+          Column(Ticker.n_trades_day, Integer),
+          Column(Ticker.n_trades_24h, Integer),
+          Column(Ticker.low_day, PRICE_PREC),
+          Column(Ticker.low_24h, PRICE_PREC),
+          Column(Ticker.high_day, PRICE_PREC),
+          Column(Ticker.high_24h, PRICE_PREC),
+          Column(Ticker.open_price, PRICE_PREC)
+          )
+    Table('depth', metadata,
+          Column('id', Integer, primary_key=True),
+          Column(Depth.createtime, DateTime),
+          Column(Depth.pair, String),
+          Column(Depth.order, String),
+          Column(Depth.idx, Integer),
+          Column(Depth.price, PRICE_PREC),
+          Column(Depth.vol, VOL_PREC),
+          Column(Depth.timestamp, DateTime)
+          )
+    return metadata
+
+
 class DBClient(object):
     def __init__(self):
-        self.engine = create_engine('postgresql+psycopg2://localhost:5432/paul')
-        self.metadata = self._create_metadata()
+        self.engine = create_engine(DB_URI)
+        self.metadata = create_metadata()
         self.trades = self.metadata.tables['trades']
         self.spreads = self.metadata.tables['spreads']
         self.ticker = self.metadata.tables['ticker']
         self.depth = self.metadata.tables['depth']
-
-    def _create_metadata(self):
-        metadata = MetaData()
-        trades = Table('trades', metadata,
-                       Column('id', Integer, primary_key=True),
-                       Column(Trade.createtime, DateTime),
-                       Column(Trade.pair, String),
-                       Column(Trade.volume, VOL_PREC),
-                       Column(Trade.price, PRICE_PREC),
-                       Column(Trade.order, String),
-                       Column(Trade.otype, String),
-                       Column(Trade.misc, String))
-        spreads = Table('spreads', metadata,
-                        Column('id', Integer, primary_key=True),
-                        Column(Spread.createtime, DateTime),
-                        Column(Spread.pair, String),
-                        Column(Spread.bid, PRICE_PREC),
-                        Column(Spread.ask, PRICE_PREC))
-        ticker = Table('ticker', metadata,
-                       Column('id', Integer, primary_key=True),
-                       Column(Ticker.createtime, DateTime),
-                       Column(Ticker.pair, String),
-                       Column(Ticker.ask_price, PRICE_PREC),
-                       Column(Ticker.ask_vol, VOL_PREC),
-                       Column(Ticker.bid_price, PRICE_PREC),
-                       Column(Ticker.bid_vol, VOL_PREC),
-                       Column(Ticker.last_price, PRICE_PREC),
-                       Column(Ticker.last_volume, VOL_PREC),
-                       Column(Ticker.vol_day, VOL_PREC),
-                       Column(Ticker.vol_24h, VOL_PREC),
-                       Column(Ticker.vwa_price_day, PRICE_PREC),
-                       Column(Ticker.vwa_price_24h, PRICE_PREC),
-                       Column(Ticker.n_trades_day, Integer),
-                       Column(Ticker.n_trades_24h, Integer),
-                       Column(Ticker.low_day, PRICE_PREC),
-                       Column(Ticker.low_24h, PRICE_PREC),
-                       Column(Ticker.high_day, PRICE_PREC),
-                       Column(Ticker.high_24h, PRICE_PREC),
-                       Column(Ticker.open_price, PRICE_PREC)
-                       )
-        depth = Table('depth', metadata,
-                      Column('id', Integer, primary_key=True),
-                      Column(Depth.createtime, DateTime),
-                      Column(Depth.pair, String),
-                      Column(Depth.order, String),
-                      Column(Depth.idx, Integer),
-                      Column(Depth.price, PRICE_PREC),
-                      Column(Depth.vol, VOL_PREC),
-                      Column(Depth.timestamp, DateTime)
-                      )
-        return metadata
 
     def create_tables(self):
         self.metadata.create_all(self.engine)
@@ -186,8 +186,8 @@ class DBClient(object):
                  Depth.price: Decimal(array[0]),
                  Depth.vol: Decimal(array[1]),
                  Depth.timestamp: datetime.utcfromtimestamp(array[2])}
-                 for order_type, orders in trades.items()
-                 for pair, trades in depth.items()
-                 for idx, array in enumerate(orders)]
+                for pair, trades in depth.items()
+                for order_type, orders in trades.items()
+                for idx, array in enumerate(orders)]
         with self.engine.begin() as conn:
             return conn.execute(self.depth.insert(), data)

@@ -2,11 +2,9 @@
 """
 Collector storing Kraken's public data in Mongo DB for later analysis
 """
-import sys
 import signal
 import logging
 import asyncio
-from datetime import datetime
 
 __author__ = "Florian Wilhelm"
 __copyright__ = "Florian Wilhelm"
@@ -14,8 +12,16 @@ __license__ = "gpl3"
 
 _logger = logging.getLogger(__name__)
 
-# TODO: Rewrite this using callbacks instead of tasks
 
+def signal_handler():
+    _logger.info("Signal handler called...")
+    for task in asyncio.Task.all_tasks():
+        task.cancel()
+    loop = asyncio.get_event_loop()
+    loop.stop()
+
+
+# TODO: Rewrite this using callbacks instead of tasks
 class Collector(object):
     def __init__(self, db_client, kraken_api, pairs, rates):
         self.db_client = db_client
@@ -28,20 +34,19 @@ class Collector(object):
         loop = asyncio.get_event_loop()
         try:
             resp = await loop.run_in_executor(None, func, *args)
-            assert not resp['error']
-        except AssertionError as e:
-            _logger.error(resp['error'])
-            self._nerrors += 1
-            return None
-        except asyncio.CancelledError as e:
+            if not resp['error']:
+                return resp['result']
+            else:
+                _logger.error(resp['error'])
+                self._nerrors += 1
+                return None
+        except asyncio.CancelledError:
             _logger.info("Task cancelled...")
             raise
-        except Exception as e:
+        except Exception:
             _logger.exception("General error:")
             self._nerrors += 1
-            return None
-        else:
-            return resp['result']
+            raise
 
     async def poll_ticker(self):
         while True:
@@ -60,28 +65,22 @@ class Collector(object):
                     self.db_client.insert_depth(resp)
             await asyncio.sleep(self.rates['depth'])
 
-    def signal_handler(self):
-        _logger.info("Signal handler called...")
-        for task in asyncio.Task.all_tasks():
-            task.cancel()
-        loop = asyncio.get_event_loop()
-        loop.stop()
-
     def start(self):
         _logger.info("Starting event loop...")
         loop = asyncio.get_event_loop()
         if _logger.getEffectiveLevel() < logging.INFO:
             loop.set_debug(True)
-        loop.add_signal_handler(signal.SIGINT, self.signal_handler)
-        loop.add_signal_handler(signal.SIGTERM, self.signal_handler)
+        loop.add_signal_handler(signal.SIGINT, signal_handler)
+        loop.add_signal_handler(signal.SIGTERM, signal_handler)
         loop.create_task(self.poll_ticker())
         loop.create_task(self.poll_depth())
         try:
             loop.run_forever()
-        except asyncio.CancelledError as e:
+        except asyncio.CancelledError:
             _logger.info("Execution was cancelled")
-        except Exception as e:
+        except Exception:
             _logger.exception("Exception in event loop:")
+            raise
         finally:
             _logger.info("Stopping event loop...")
             loop.close()

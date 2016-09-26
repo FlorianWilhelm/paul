@@ -5,7 +5,6 @@ Paul's command line interface
 import argparse
 import sys
 import logging
-import time
 
 from .kraken import API
 from .collector import Collector
@@ -23,19 +22,20 @@ def collect(args):
     _logger.info("Starting to collect...")
     client = DBClient()
     api = API()
-    asset_pairs = list(api.assetpairs()['result'].keys())
-    euro_pairs = [x for x in  asset_pairs
+    asset_pairs = list(api.asset_pairs()['result'].keys())
+    euro_pairs = [x for x in asset_pairs
                   if 'EU' in x and not x.endswith('.d')]
     rates = {'ticker': 10, 'depth': 600}
     collector = Collector(client, api, euro_pairs, rates)
     collector.start()
 
+
 def interact(args):
     _logger.info("Starting interactive session...")
     from IPython import embed
     api = API()
-    asset_pairs = list(api.assetpairs()['result'].keys())
-    euro_pairs = [x for x in  asset_pairs
+    asset_pairs = list(api.asset_pairs()['result'].keys())
+    euro_pairs = [x for x in asset_pairs
                   if 'EU' in x and not x.endswith('.d')]
     db = DBClient()
     embed()
@@ -87,9 +87,9 @@ def parse_args(args):
 
 def main(args):
     args = parse_args(args)
-    logformat = '[%(asctime)s] %(levelname)s:%(name)s:%(message)s'
+    log_format = '[%(asctime)s] %(levelname)s:%(name)s:%(message)s'
     logging.basicConfig(level=args.loglevel, stream=sys.stdout,
-                        format=logformat, datefmt='%Y-%m-%d %H:%M:%S')
+                        format=log_format, datefmt='%Y-%m-%d %H:%M:%S')
     args.func(args)
 
 
