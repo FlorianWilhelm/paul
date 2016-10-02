@@ -23,7 +23,7 @@ def sort_chunks(chunks):
 
 class BellmanBroker(object):
     def __init__(self, pair, funds, min_bet, horizon, timestep, discount,
-                 max_stake=None, ask_fee=0., bid_fee=0.):
+                 max_stake=None, ask_fee=0., bid_fee=0., risk=0.5):
         self.pair = pair  # currency pair
         self.ask_fee = 1. + ask_fee / 100  # in percent
         self.bid_fee = 1. - bid_fee / 100  # in percent
@@ -41,6 +41,10 @@ class BellmanBroker(object):
 
         if self.max_stake % min_bet > 1e-6:
             raise RuntimeError("stake should be divisible by min_bet")
+
+        if not 0 <= risk <= 1:
+            raise RuntimeError("risk should be in [0, 1]")
+
         n_chunks = self.max_stake // min_bet
         self.chunks = ma.array(np.empty(size=n_chunks), mask=[True]*n_chunks)
 
@@ -104,3 +108,4 @@ class BellmanBroker(object):
 
         return integrate.quad(cost, 0., np.infinity)
 
+    # TODO: Implement usage of risk for strategies

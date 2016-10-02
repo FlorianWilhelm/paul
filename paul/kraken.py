@@ -52,7 +52,7 @@ class API(object):
         params = {} if params is None else params
         urlpath = '/{version}/private/{method}'.format(
             version=self._apiversion, method=method)
-        params['none'] = int(1000*time.time())
+        params['nonce'] = int(1000*time.time())
         # generate signed headers
         postdata = urllib.parse.urlencode(params)
         enc_params = (str(params['nonce']) + postdata).encode()
