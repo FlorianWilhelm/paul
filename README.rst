@@ -6,10 +6,11 @@ Kraken Paul
 Add a short description here!
 
 
-Description
-===========
+Sources
+=======
 
-A LONGER DESCRIPTION OF YOUR PROJECT GOES HERE...
+- https://www.quantopian.com/posts/request-for-feedback-portfolio-optimization-api
+- http://srome.github.io/Eigenvesting-IV-Predicting-Stock-And-Portfolio-Returns-With-Bayesian-Statistics/
 
 
 Note
