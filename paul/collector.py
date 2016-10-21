@@ -21,7 +21,6 @@ def signal_handler():
     loop.stop()
 
 
-# TODO: Rewrite this using callbacks instead of tasks
 class Collector(object):
     def __init__(self, db_client, kraken_api, pairs, rates):
         self.db_client = db_client
@@ -46,7 +45,6 @@ class Collector(object):
         except Exception:
             _logger.exception("General error:")
             self._nerrors += 1
-            raise
 
     async def poll_ticker(self):
         while True:
