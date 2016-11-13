@@ -29,27 +29,31 @@ class Collector(object):
         self.pairs = pairs
         self._nerrors = 0
 
+    async def _call_api(self, func, *args):
+        resp = await self._call_async(func, *args)
+        if not resp['error']:
+            return resp['result']
+        else:
+            _logger.error(resp['error'])
+            self._nerrors += 1
+            return None
+
     async def _call_async(self, func, *args):
         loop = asyncio.get_event_loop()
         try:
-            resp = await loop.run_in_executor(None, func, *args)
-            if not resp['error']:
-                return resp['result']
-            else:
-                _logger.error(resp['error'])
-                self._nerrors += 1
-                return None
+            return await loop.run_in_executor(None, func, *args)
         except asyncio.CancelledError:
             _logger.info("Task cancelled...")
             raise
-        except Exception:
+        except Exception as e:
             _logger.exception("General error:")
             self._nerrors += 1
+            return {'error': str(e)}
 
     async def poll_ticker(self):
         while True:
             _logger.info("Polling ticker...")
-            resp = await self._call_async(self.api.ticker, self.pairs)
+            resp = await self._call_api(self.api.ticker, self.pairs)
             if resp:
                 await self._call_async(self.db_client.insert_ticker, resp)
             await asyncio.sleep(self.rates['ticker'])
@@ -58,7 +62,7 @@ class Collector(object):
         while True:
             _logger.info("Polling depth...")
             for pair in self.pairs:
-                resp = await self._call_async(self.api.depth, pair)
+                resp = await self._call_api(self.api.depth, pair)
                 if resp:
                     await self._call_async(self.db_client.insert_depth, resp)
             await asyncio.sleep(self.rates['depth'])
