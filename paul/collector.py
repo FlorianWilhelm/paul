@@ -29,7 +29,7 @@ class Collector(object):
         self.pairs = pairs
         self._nerrors = 0
 
-    async def _call_api(self, func, *args):
+    async def _call_async(self, func, *args):
         loop = asyncio.get_event_loop()
         try:
             resp = await loop.run_in_executor(None, func, *args)
@@ -49,18 +49,18 @@ class Collector(object):
     async def poll_ticker(self):
         while True:
             _logger.info("Polling ticker...")
-            resp = await self._call_api(self.api.ticker, self.pairs)
+            resp = await self._call_async(self.api.ticker, self.pairs)
             if resp:
-                self.db_client.insert_ticker(resp)
+                await self._call_async(self.db_client.insert_ticker, resp)
             await asyncio.sleep(self.rates['ticker'])
 
     async def poll_depth(self):
         while True:
             _logger.info("Polling depth...")
             for pair in self.pairs:
-                resp = await self._call_api(self.api.depth, pair)
+                resp = await self._call_async(self.api.depth, pair)
                 if resp:
-                    self.db_client.insert_depth(resp)
+                    await self._call_async(self.db_client.insert_ticker, resp)
             await asyncio.sleep(self.rates['depth'])
 
     def start(self):
