@@ -60,7 +60,7 @@ class Collector(object):
             for pair in self.pairs:
                 resp = await self._call_async(self.api.depth, pair)
                 if resp:
-                    await self._call_async(self.db_client.insert_ticker, resp)
+                    await self._call_async(self.db_client.insert_depth, resp)
             await asyncio.sleep(self.rates['depth'])
 
     def start(self):
